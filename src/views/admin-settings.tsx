@@ -67,9 +67,10 @@ const SettingsScreen = ({ user, profile, onBack, showToast }) => {
                         (window.matchMedia('(display-mode: standalone)').matches || 
                          window.navigator.standalone === true);
     
-    // Check if user is admin (admin can use premium features)
+    // Check if user is admin (admin can use premium features) or has Elite subscription
     const isAdmin = user?.email === ADMIN_EMAIL;
-    const canUsePremium = isAdmin; // In future, also check for premium subscription
+    const isElite = profile?.isElite === true && (profile?.eliteStatus === 'active' || profile?.eliteStatus === 'trialing');
+    const canUsePremium = isAdmin || isElite;
     
     const [settings, setSettings] = useState({
         // Location
@@ -300,6 +301,69 @@ const SettingsScreen = ({ user, profile, onBack, showToast }) => {
                             <li>Screenshot detection & auto-delete chats</li>
                         </ul>
                     </div>
+                    
+                    {/* Subscription Status & Management */}
+                    {isElite ? (
+                        <div className="mb-4 p-3 bg-green-900/20 rounded-xl border border-green-600/30">
+                            <div className="flex items-center gap-2 mb-2">
+                                <CheckCircle size={16} className="text-green-400" />
+                                <span className="font-bold text-sm text-green-100">Elite Active</span>
+                            </div>
+                            <p className="text-xs text-green-200 mb-3">
+                                You have access to all premium features below.
+                            </p>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        // Import dynamically to avoid loading at startup
+                                        const { httpsCallable } = await import('firebase/functions');
+                                        const { functions } = await import('../config/firebase');
+                                        
+                                        if (!functions) {
+                                            showToast?.('Service not available', 'error');
+                                            return;
+                                        }
+                                        
+                                        // Get customer portal URL
+                                        const createPortalSession = httpsCallable(functions, 'createCustomerPortalSession');
+                                        const result = await createPortalSession({
+                                            returnUrl: window.location.origin + '/settings'
+                                        }) as { data: { url: string } };
+                                        
+                                        // Redirect to Stripe Customer Portal
+                                        window.location.href = result.data.url;
+                                    } catch (error) {
+                                        console.error('Error opening customer portal:', error);
+                                        showToast?.('Failed to open subscription management', 'error');
+                                    }
+                                }}
+                                className="w-full py-2 px-3 bg-slate-900/60 hover:bg-slate-800/60 rounded-lg text-xs font-bold text-slate-200 border border-green-600/30 transition-colors flex items-center justify-between group"
+                            >
+                                <span>Manage Subscription</span>
+                                <ExternalLink size={14} className="text-slate-400 group-hover:text-slate-300" />
+                            </button>
+                        </div>
+                    ) : !isAdmin && (
+                        <div className="mb-4 p-3 bg-slate-900/40 rounded-xl border border-orange-600/50">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Star size={16} className="text-orange-400" />
+                                <span className="font-bold text-sm text-orange-100">Unlock Elite Features</span>
+                            </div>
+                            <p className="text-xs text-slate-300 mb-3">
+                                Subscribe to GayTradies Elite to unlock all premium privacy features.
+                            </p>
+                            <button
+                                onClick={() => {
+                                    // Navigate to Shop page
+                                    window.location.href = '/shop';
+                                }}
+                                className="w-full py-2 px-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-lg text-xs font-bold text-white transition-colors shadow-sm"
+                            >
+                                Subscribe Now - £9.99/month
+                            </button>
+                        </div>
+                    )}
+                    
                     <ToggleSwitch
                         label="Incognito Mode"
                         description="Hide your profile while still browsing others"
@@ -307,7 +371,7 @@ const SettingsScreen = ({ user, profile, onBack, showToast }) => {
                         onChange={(val) => setSettings({ ...settings, incognitoMode: val })}
                         icon={EyeOff}
                         disabled={!canUsePremium}
-                        badge={!canUsePremium ? "Soon" : null}
+                        badge={!canUsePremium ? "Elite" : null}
                         iconColor="text-orange-400"
                         labelColor="text-slate-100"
                         descriptionColor="text-slate-400"
@@ -319,7 +383,7 @@ const SettingsScreen = ({ user, profile, onBack, showToast }) => {
                         onChange={(val) => setSettings({ ...settings, verifiedOnly: val })}
                         icon={ShieldCheck}
                         disabled={!canUsePremium}
-                        badge={!canUsePremium ? "Soon" : null}
+                        badge={!canUsePremium ? "Elite" : null}
                         iconColor="text-orange-400"
                         labelColor="text-slate-100"
                         descriptionColor="text-slate-400"
@@ -331,7 +395,7 @@ const SettingsScreen = ({ user, profile, onBack, showToast }) => {
                         onChange={(val) => setSettings({ ...settings, blurPhotos: val })}
                         icon={Eye}
                         disabled={!canUsePremium}
-                        badge={!canUsePremium ? "Soon" : null}
+                        badge={!canUsePremium ? "Elite" : null}
                         iconColor="text-orange-400"
                         labelColor="text-slate-100"
                         descriptionColor="text-slate-400"
@@ -343,7 +407,7 @@ const SettingsScreen = ({ user, profile, onBack, showToast }) => {
                         onChange={(val) => setSettings({ ...settings, hideOnlineStatus: val })}
                         icon={Clock}
                         disabled={!canUsePremium}
-                        badge={!canUsePremium ? "Soon" : null}
+                        badge={!canUsePremium ? "Elite" : null}
                         iconColor="text-orange-400"
                         labelColor="text-slate-100"
                         descriptionColor="text-slate-400"
@@ -389,7 +453,7 @@ const SettingsScreen = ({ user, profile, onBack, showToast }) => {
                             onChange={(val) => setSettings({ ...settings, screenshotDetection: val })}
                             icon={Camera}
                             disabled={!canUsePremium || !isMobileApp}
-                            badge={!isMobileApp ? "Android" : (!canUsePremium ? "Soon" : null)}
+                            badge={!isMobileApp ? "Android" : (!canUsePremium ? "Elite" : null)}
                             iconColor="text-orange-400"
                             labelColor="text-slate-100"
                             descriptionColor="text-slate-400"
@@ -401,7 +465,7 @@ const SettingsScreen = ({ user, profile, onBack, showToast }) => {
                             onChange={(val) => setSettings({ ...settings, verifiedOnlyChats: val })}
                             icon={UserCheck}
                             disabled={!canUsePremium}
-                            badge={!canUsePremium ? "Soon" : null}
+                            badge={!canUsePremium ? "Elite" : null}
                             iconColor="text-orange-400"
                             labelColor="text-slate-100"
                             descriptionColor="text-slate-400"

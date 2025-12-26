@@ -156,6 +156,8 @@ The Elite features that should be unlocked after subscription:
 4. **Screenshot Detection**: Get notified of screenshots
 5. **Elite Badge**: Verified elite member badge on profile
 
+### Checking Elite Status in Code
+
 To check Elite status in components:
 
 ```typescript
@@ -172,6 +174,16 @@ const checkEliteStatus = async (userId: string) => {
          (profile?.eliteStatus === 'active' || profile?.eliteStatus === 'trialing');
 };
 ```
+
+### Settings Page Integration
+
+The Settings page now includes:
+- **Elite Active Badge**: Shows when user has active subscription
+- **Manage Subscription Button**: Opens Stripe Customer Portal
+- **Subscribe Button**: Shows for non-Elite users to subscribe
+- **Feature Toggles**: All Elite features with proper gating
+
+Elite features are automatically unlocked when `profile.isElite === true`.
 
 ## Step 7: Production Deployment
 

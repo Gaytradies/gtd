@@ -362,3 +362,50 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
   }
 });
 
+/**
+ * Create Customer Portal Session for subscription management
+ * Callable from authenticated users
+ */
+export const createCustomerPortalSession = functions.https.onCall(async (data, context) => {
+  // Require authentication
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const userId = context.auth.uid;
+
+  try {
+    const stripe = initStripe();
+
+    // Get customer ID from Firestore
+    const customerDoc = await admin
+      .firestore()
+      .collection("artifacts")
+      .doc(APP_ID)
+      .collection("public")
+      .doc("data")
+      .collection("stripe_customers")
+      .doc(userId)
+      .get();
+
+    if (!customerDoc.exists || !customerDoc.data()?.customerId) {
+      throw new functions.https.HttpsError("not-found", "No Stripe customer found for this user.");
+    }
+
+    const customerId = customerDoc.data()!.customerId;
+
+    // Create portal session
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: data.returnUrl || "https://gaytradies.com/settings",
+    });
+
+    return {
+      url: session.url,
+    };
+  } catch (error: any) {
+    console.error("Error creating portal session:", error);
+    throw new functions.https.HttpsError("internal", error.message || "Failed to create portal session");
+  }
+});
+
