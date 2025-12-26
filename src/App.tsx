@@ -136,6 +136,26 @@ export default function App() {
     initializeFirebase();
   }, []);
 
+  // Handle URL parameters for Stripe success/cancel redirects
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    const pathname = window.location.pathname;
+    
+    // Handle Elite subscription success
+    if (pathname.includes('elite-success') && sessionId) {
+      // Show success message and redirect to shop
+      setTimeout(() => {
+        showToast('Elite Membership activated! Welcome to GayTradies Elite! 🌟', 'success');
+        setView('shop');
+        // Clear URL parameters
+        window.history.replaceState({}, '', '/');
+      }, 500);
+    }
+  }, []);
+
   // Auth Init
   useEffect(() => {
     if (!auth) {
