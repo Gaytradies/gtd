@@ -5,6 +5,7 @@ import * as admin from "firebase-admin";
 admin.initializeApp();
 
 const APP_ID = process.env.APP_ID || "gay-tradies-v2";
+const DEFAULT_RETURN_URL = process.env.DEFAULT_RETURN_URL || "https://gaytradies.com";
 
 // Initialize Stripe - will be loaded lazily when needed
 let stripe: any = null;
@@ -145,8 +146,8 @@ export const createEliteCheckoutSession = functions.https.onCall(async (data, co
       ],
       customer: customerId,
       client_reference_id: userId,
-      success_url: `${data.successUrl || "https://gaytradies.com/elite-success"}?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: data.cancelUrl || "https://gaytradies.com/shop",
+      success_url: data.successUrl || `${DEFAULT_RETURN_URL}/elite-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: data.cancelUrl || `${DEFAULT_RETURN_URL}/shop`,
       metadata: {
         firebaseUID: userId,
         appId: APP_ID,
@@ -397,7 +398,7 @@ export const createCustomerPortalSession = functions.https.onCall(async (data, c
     // Create portal session
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: data.returnUrl || "https://gaytradies.com/settings",
+      return_url: data.returnUrl || `${DEFAULT_RETURN_URL}/settings`,
     });
 
     return {

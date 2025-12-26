@@ -61,7 +61,7 @@ const SafetyCard = ({ icon: Icon, title, description, action, actionLabel, varia
 );
 
 // --- SETTINGS SCREEN ---
-const SettingsScreen = ({ user, profile, onBack, showToast }) => {
+const SettingsScreen = ({ user, profile, onBack, showToast, onNavigate }) => {
     // Detect if running on mobile app or web
     const isMobileApp = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && 
                         (window.matchMedia('(display-mode: standalone)').matches || 
@@ -354,8 +354,10 @@ const SettingsScreen = ({ user, profile, onBack, showToast }) => {
                             </p>
                             <button
                                 onClick={() => {
-                                    // Navigate to Shop page
-                                    window.location.href = '/shop';
+                                    // Navigate to Shop page using the app's navigation system
+                                    if (onNavigate) {
+                                        onNavigate('shop');
+                                    }
                                 }}
                                 className="w-full py-2 px-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-lg text-xs font-bold text-white transition-colors shadow-sm"
                             >

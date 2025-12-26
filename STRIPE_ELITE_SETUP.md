@@ -81,8 +81,11 @@ The integration uses:
    firebase functions:config:set \
      stripe.secret_key="sk_test_YOUR_SECRET_KEY" \
      stripe.webhook_secret="whsec_YOUR_WEBHOOK_SECRET" \
-     stripe.elite_price_id="price_YOUR_PRICE_ID"
+     stripe.elite_price_id="price_YOUR_PRICE_ID" \
+     app.default_return_url="https://your-domain.com"
    ```
+   
+   Note: For local development, use `http://localhost:5173` as the default return URL.
 
 4. Install dependencies for Cloud Functions:
    ```bash

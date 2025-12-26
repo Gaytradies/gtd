@@ -580,7 +580,7 @@ export default function App() {
           showToast("Failed to sign out", "error");
         }
       }} showToast={showToast} onEnableLocation={updateLocation} onNavigate={setView} profilePictureRequests={profilePictureRequests} />;
-      case 'settings': return <SettingsScreen user={user} profile={userProfile} onBack={() => setView('profile')} showToast={showToast} />;
+      case 'settings': return <SettingsScreen user={user} profile={userProfile} onBack={() => setView('profile')} onNavigate={setView} showToast={showToast} />;
       case 'workCalendar': return <WorkCalendar user={user} profile={userProfile} onBack={() => setView('profile')} showToast={showToast} />;
       case 'paymentsCredits': return <PaymentsCredits user={user} profile={userProfile} onBack={() => setView('profile')} showToast={showToast} />;
       case 'safety': return <SafetyCentre user={user} onBack={() => setView('profile')} showToast={showToast} />;
