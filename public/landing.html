@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="theme-color" content="#050814">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>GayTradies · Beta Access</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --card: rgba(15,23,41,0.90);
+      --accent: #f97316;
+      --accent-2: #fbbf24;
+      --muted: #94a3b8;
+      --text: #f1f5f9;
+      --glass: rgba(255,255,255,0.05);
+      --line: rgba(255,255,255,0.10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(249,115,22,0.10), transparent 35%),
+        radial-gradient(circle at 75% 0%, rgba(251,191,36,0.14), transparent 30%),
+        linear-gradient(145deg, #0a0e1a, #0f1729 55%, #0f1729);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    a { color: inherit; text-decoration: none; }
+    header {
+      padding: 18px clamp(16px, 4vw, 40px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(14px);
+      background: rgba(10,14,26,0.95);
+      border-bottom: 1px solid var(--line);
+      z-index: 10;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+    .mark {
+      width: 42px; height: 42px; border-radius: 14px;
+      background: linear-gradient(135deg,#f97316,#fbbf24);
+      display:flex; align-items:center; justify-content:center;
+      color:#0b1120; font-weight:900; box-shadow:0 14px 34px rgba(249,115,22,0.38);
+    }
+    .beta-pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(249,115,22,0.2), rgba(251,191,36,0.28));
+      border: 1px solid rgba(251,191,36,0.45);
+      color: #fed7aa;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      border-radius: 14px;
+      background: linear-gradient(120deg, #f97316, #fbbf24);
+      color: #0a0e1a;
+      font-weight: 800;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 15px 40px rgba(249,115,22,0.40);
+      transition: transform 180ms ease, box-shadow 180ms ease;
+      min-height: 48px;
+      touch-action: manipulation;
+    }
+    .cta:hover { transform: translateY(-2px); box-shadow: 0 18px 48px rgba(249,115,22,0.50); }
+    .cta:active { transform: translateY(0); }
+    .hero-wrap {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: clamp(28px, 6vw, 60px) clamp(16px, 5vw, 48px);
+      display: grid;
+      gap: 22px;
+    }
+    .card {
+      background: var(--glass);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 22px 64px rgba(0,0,0,0.4);
+      backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 18% 20%, rgba(249,115,22,0.06), transparent 45%),
+                  radial-gradient(circle at 80% 0%, rgba(251,191,36,0.05), transparent 40%);
+      pointer-events: none;
+      z-index: -1;
+    }
+    .headline {
+      font-size: clamp(32px, 4vw, 46px);
+      line-height: 1.04;
+      font-weight: 900;
+    }
+    .sub {
+      color: var(--muted);
+      line-height: 1.55;
+      max-width: 60ch;
+    }
+    .stacked { display: flex; gap: 12px; flex-wrap: wrap; }
+    .input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: #f8fafc;
+      font-weight: 600;
+      min-height: 48px;
+      font-size: 16px;
+    }
+    .input:focus {
+      outline: 2px solid #f97316;
+      outline-offset: 2px;
+      background: rgba(255,255,255,0.08);
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+    .list { display: grid; gap: 10px; }
+    .item {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      display: grid;
+      gap: 4px;
+    }
+    .item strong { color: #fff; }
+    .hero-card { display: grid; gap: 16px; }
+    .hero-top {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(220px, 0.9fr);
+      gap: 14px;
+      align-items: center;
+    }
+    .hero-photo {
+      width: 100%;
+      aspect-ratio: 3 / 4; /* taller than wide */
+      max-width: 320px;
+      margin-left: auto;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.35);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+    .hero-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      filter: saturate(1.02);
+    }
+    @media (max-width: 720px) {
+      header { position: sticky; }
+      .hero-top { grid-template-columns: 1fr; }
+      .hero-photo { max-width: 100%; }
+    }
+
+    /* Footer (added) */
+    .footer {
+      margin-top: auto;
+      padding: 26px clamp(16px, 4vw, 40px);
+      border-top: 1px solid var(--line);
+      background: rgba(10,14,26,0.90);
+      backdrop-filter: blur(10px);
+      display: grid;
+      gap: 12px;
+    }
+    .footer-top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-brand {
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: #e5e7eb;
+    }
+    .footer-tagline {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .footer-socials {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .footer-socials a {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      color: #e5e7eb;
+      font-weight: 800;
+      transition: background 180ms ease, transform 180ms ease;
+    }
+    .footer-socials a:hover {
+      background: rgba(255,255,255,0.08);
+      transform: translateY(-1px);
+    }
+    .footer-icon {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+    }
+    .footer-bottom {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-links {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .footer-links a {
+      color: #cbd5e1;
+      font-weight: 700;
+      opacity: 0.9;
+    }
+    .footer-links a:hover {
+      opacity: 1;
+      color: #fff;
+    }
+  </style>
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('app') === '1') {
+        localStorage.setItem('gt_app_seen', '1');
+      }
+      const hasSeenApp = localStorage.getItem('gt_app_seen') === '1';
+      if (hasSeenApp && params.get('stay') !== '1') {
+        window.location.href = '/?app=1';
+      }
+    })();
+  </script>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="mark">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0b1120" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M2 18v-2a6 6 0 0 1 6-6v-2l3-2 3 2v2a6 6 0 0 1 6 6v2" />
+          <path d="M4.5 18h15" />
+          <path d="M6 14v4" />
+          <path d="M10 10v8" />
+          <path d="M14 10v8" />
+          <path d="M18 14v4" />
+        </svg>
+      </div>
+      <div>
+        <div style="font-size:14px;color:#cbd5e1;font-weight:700;letter-spacing:0.02em;">GayTradies</div>
+        <div class="beta-pill">Open beta</div>
+      </div>
+    </div>
+    <a class="cta" href="/?app=1">Open web app →</a>
+  </header>
+
+  <main class="hero-wrap">
+    <div class="card hero-card">
+      <div class="beta-pill" style="width: fit-content;">Get connected. Get hired.</div>
+      <div class="hero-top">
+        <div>
+          <h1 class="headline">Join the beta. Flirt or get hired. Fast.</h1>
+          <p class="sub"><b>One tap to switch between Social and Hire.</b><br>Built for discretion when only looking for work.<br>Switch Social on when you want to mingle.</p>
+        </div>
+        <div class="hero-photo" aria-hidden="true">
+          <img src="https://firebasestorage.googleapis.com/v0/b/gaytradie-bdd1f.firebasestorage.app/o/1766086030520.jpg?alt=media&token=638b3ff2-f7c8-4eb4-ac37-e7586127c295" alt="Tradie in workwear">
+        </div>
+      </div>
+      <form id="beta-form" style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;">
+        <input id="beta-email" class="input" type="email" placeholder="you@example.com" required />
+        <button class="cta" type="submit">Join &amp; open app</button>
+      </form>
+      <div id="beta-message" class="sub" style="font-size:13px; color:#e2e8f0;"></div>
+      <div class="pill" style="justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <span>We’ll pre-fill your signup. Verify email, then log in.</span>
+        <a id="open-gmail" style="color:#fbbf24;font-weight:700;text-decoration:none;" href="https://mail.google.com" target="_blank" rel="noreferrer">Open Gmail</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="list">
+        <div class="item"><strong>Social Tab</strong> Trade-to-trade and trade-to-admirer flirting. Workwear selfies, boots and PPE. Fast DMs.</div>
+        <div class="item"><strong>Hire Tab</strong> CSCS/ECS checked tradies. Identity verified via Stripe. No cowboys.</div>
+        <div class="item"><strong>Secured payments</strong> Stripe escrow, released on completion. No awkward chasing.</div>
+        <div class="item"><strong>GPS quick-match</strong> Nearby lads get pinged for jobs, chats or both.</div>
+        <div class="item"><strong>Android/iOS</strong> Add to Home Screen. Android/iOS friendly.</div>
+      </div>
+      <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="cta" href="/?app=1">Launch now →</a>
+        <a class="cta" style="background:transparent;color:var(--text);border:1px solid var(--line);box-shadow:none;" href="#pwa">Add to Home Screen</a>
+      </div>
+    </div>
+  </main>
+
+  <section id="pwa" class="hero-wrap" style="padding-top:0;">
+    <div class="card">
+      <div class="beta-pill" style="width: fit-content;">Add to Home Screen</div>
+      <div class="list" style="margin-top:12px;">
+        <div class="item"><strong>iOS Safari:</strong> Share → “Add to Home Screen” → open.</div>
+        <div class="item"><strong>Android Chrome:</strong> Menu (⋮) → “Add to Home screen” → open.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer (updated with socials) -->
+  <footer class="footer">
+    <div class="footer-top">
+      <div>
+        <div class="footer-brand">GayTradies · Open Beta</div>
+        <div class="footer-tagline">Flirt. Work. Hire. Get paid.</div>
+      </div>
+
+      <div class="footer-socials" aria-label="Social links">
+        <span style="font-weight:800;">Follow:</span>
+
+        <a href="https://instagram.com/gaytradiesapp" target="_blank" rel="noreferrer" aria-label="Instagram @gaytradiesapp">
+          <svg class="footer-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2Z" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 8.5A5.5 5.5 0 1 1 6.5 14 5.5 5.5 0 0 1 12 8.5Z" stroke="currentColor" stroke-width="2"/>
+            <path d="M18 6.8a1 1 0 1 1-1 1 1 1 0 0 1 1-1Z" fill="currentColor"/>
+          </svg>
+          Instagram @gaytradiesapp
+        </a>
+
+        <a href="https://x.com/gaytradiesapp" target="_blank" rel="noreferrer" aria-label="X @gaytradiesapp">
+          <svg class="footer-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M18.9 2H22l-6.8 7.8L23 22h-6.2l-4.9-6.4L6.3 22H3.2l7.3-8.4L1 2h6.4l4.4 5.8L18.9 2zm-1.1 18h1.7L7.3 3.9H5.5L17.8 20z"/>
+          </svg>
+          X @gaytradiesapp
+        </a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>© GayTradies · Built for gay, bi & curious tradies and the lads that hire them.</span>
+      <span class="footer-links">
+        <a href="/terms">Terms</a>
+        <span style="opacity:0.5;">·</span>
+        <a href="/privacy">Privacy</a>
+        <span style="opacity:0.5;">·</span>
+        <a href="mailto:support@gaytradies.com">support@gaytradies.com</a>
+      </span>
+    </div>
+  </footer>
+
+  <script>
+    const form = document.getElementById('beta-form');
+    const emailInput = document.getElementById('beta-email');
+    const messageEl = document.getElementById('beta-message');
+    const openGmail = document.getElementById('open-gmail');
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const email = emailInput.value.trim();
+      if (!email) {
+        messageEl.textContent = 'Enter an email to join the beta.';
+        return;
+      }
+      messageEl.textContent = 'Saving your details and opening the app...';
+      localStorage.setItem('gt_prefill_email', email);
+      localStorage.setItem('gt_verify_notice', '1');
+      localStorage.setItem('gt_app_seen', '1');
+      const appUrl = new URL('/?app=1', window.location.origin);
+      appUrl.searchParams.set('prefillEmail', email);
+      appUrl.searchParams.set('verifyNotice', '1');
+      window.location.href = appUrl.toString();
+    });
+
+    openGmail.addEventListener('click', () => {
+      window.open('https://mail.google.com', '_blank', 'noopener');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0e1a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>GayTradies - Connect, Hire, Get Hired</title>
+    <script>
+      (function() {
+        const params = new URLSearchParams(window.location.search);
+        const isApp = params.get('app') === '1';
+
+        if (isApp) {
+          localStorage.setItem('gt_app_seen', '1');
+        }
+
+        const hasVisitedApp = localStorage.getItem('gt_app_seen') === '1';
+        if (!hasVisitedApp && !isApp) {
+          const landingUrl = new URL('/landing.html', window.location.origin);
+          params.forEach((value, key) => landingUrl.searchParams.set(key, value));
+          window.location.replace(landingUrl.toString());
+        }
+        
+        // Force dark mode on initialization
+        document.documentElement.classList.add('dark');
+      })();
+    </script>
+  </head>
+  <body class="bg-dark-bg text-slate-100">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx" defer></script>
+
+<script>
+  window.__firebase_config = JSON.stringify({
+    apiKey: "AIzaSyBxkPiRXNSXnYUVHKhIP2MUNEYA-UEv10M",
+    authDomain: "gaytradie-bdd1f.firebaseapp.com",
+    projectId: "gaytradie-bdd1f",
+    storageBucket: "gaytradie-bdd1f.firebasestorage.app",
+    messagingSenderId: "890637334556",
+    appId: "1:890637334556:web:7b11e81de9dc89749887d9"
+  });
+  window.__app_id = 'gay-tradies-v2';
+</script>
+
+  </body>
+</html>
