@@ -6,6 +6,8 @@ admin.initializeApp();
 
 const APP_ID = process.env.APP_ID || "gay-tradies-v2";
 const DEFAULT_RETURN_URL = process.env.DEFAULT_RETURN_URL || "https://gaytradies.com";
+const PLATFORM_FEE_PERCENT = 0.15; // 15% platform fee
+const MAX_PAYMENT_AMOUNT = 10000; // Maximum £10,000 per transaction
 
 // Initialize Stripe - will be loaded lazily when needed
 let stripe: any = null;
@@ -22,6 +24,52 @@ const initStripe = () => {
     });
   }
   return stripe;
+};
+
+/**
+ * Calculate age from date of birth
+ * @param dob Date of birth object with year, month, day
+ * @returns Age in years, or null if invalid
+ */
+const calculateAge = (dob: { year: number; month: number; day: number } | null): number | null => {
+  if (!dob || !dob.year || !dob.month || !dob.day) {
+    return null;
+  }
+
+  const birthDate = new Date(dob.year, dob.month - 1, dob.day);
+  const today = new Date();
+  const age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  const dayDiff = today.getDate() - birthDate.getDate();
+
+  return monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+};
+
+/**
+ * Validate return URL to prevent open redirects
+ * @param url URL to validate
+ * @returns true if URL is allowed
+ */
+const isValidReturnUrl = (url: string): boolean => {
+  try {
+    const parsedUrl = new URL(url);
+    const allowedDomains = [
+      "gaytradies.com",
+      "www.gaytradies.com",
+      "localhost",
+      "127.0.0.1",
+    ];
+    
+    // Allow any subdomain of gaytradies.com
+    const hostname = parsedUrl.hostname;
+    const isAllowed = allowedDomains.some(domain => 
+      hostname === domain || hostname.endsWith(`.${domain}`)
+    );
+    
+    return isAllowed;
+  } catch (error) {
+    return false;
+  }
 };
 
 /**
@@ -371,17 +419,8 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
           const dob = verifiedData.dob;
           
           // Calculate age if DOB is available
-          let isOver18 = true;
-          if (dob) {
-            const birthDate = new Date(dob.year, dob.month - 1, dob.day);
-            const today = new Date();
-            const age = today.getFullYear() - birthDate.getFullYear();
-            const monthDiff = today.getMonth() - birthDate.getMonth();
-            const dayDiff = today.getDate() - birthDate.getDate();
-            
-            const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
-            isOver18 = actualAge >= 18;
-          }
+          const age = calculateAge(dob);
+          const isOver18 = age !== null ? age >= 18 : false; // Default to false if age cannot be determined
 
           await profileRef.set(
             {
@@ -571,6 +610,11 @@ export const createIdentityVerificationSession = functions.https.onCall(async (d
   const userId = context.auth.uid;
   const returnUrl = data?.returnUrl || `${DEFAULT_RETURN_URL}/verification-complete`;
 
+  // Validate return URL to prevent open redirects
+  if (!isValidReturnUrl(returnUrl)) {
+    throw new functions.https.HttpsError("invalid-argument", "Invalid return URL");
+  }
+
   try {
     const stripe = initStripe();
 
@@ -632,6 +676,10 @@ export const createEscrowPayment = functions.https.onCall(async (data, context) 
     throw new functions.https.HttpsError("invalid-argument", "Amount must be greater than 0");
   }
 
+  if (amount > MAX_PAYMENT_AMOUNT) {
+    throw new functions.https.HttpsError("invalid-argument", `Amount cannot exceed £${MAX_PAYMENT_AMOUNT}`);
+  }
+
   try {
     const stripe = initStripe();
 
@@ -664,6 +712,10 @@ export const createEscrowPayment = functions.https.onCall(async (data, context) 
 
       const userEmail = userProfile.data()?.email || context.auth.token.email;
 
+      if (!userEmail) {
+        throw new functions.https.HttpsError("invalid-argument", "User email is required");
+      }
+
       // Create new Stripe customer
       const customer = await stripe.customers.create({
         email: userEmail,
@@ -683,7 +735,7 @@ export const createEscrowPayment = functions.https.onCall(async (data, context) 
     }
 
     // Calculate application fee (15% platform fee)
-    const applicationFeeAmount = Math.round(amount * 100 * 0.15);
+    const applicationFeeAmount = Math.round(amount * 100 * PLATFORM_FEE_PERCENT);
     const amountInCents = Math.round(amount * 100);
 
     // Create Payment Intent with manual capture for escrow
