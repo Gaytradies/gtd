@@ -352,6 +352,154 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
         break;
       }
 
+      case "identity.verification_session.verified": {
+        const verification = event.data.object;
+        const userId = verification.metadata?.firebaseUID;
+
+        if (userId) {
+          const profileRef = admin
+            .firestore()
+            .collection("artifacts")
+            .doc(APP_ID)
+            .collection("public")
+            .doc("data")
+            .collection("profiles")
+            .doc(userId);
+
+          // Get verified data
+          const verifiedData = verification.verified_outputs || {};
+          const dob = verifiedData.dob;
+          
+          // Calculate age if DOB is available
+          let isOver18 = true;
+          if (dob) {
+            const birthDate = new Date(dob.year, dob.month - 1, dob.day);
+            const today = new Date();
+            const age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            const dayDiff = today.getDate() - birthDate.getDate();
+            
+            const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+            isOver18 = actualAge >= 18;
+          }
+
+          await profileRef.set(
+            {
+              ageVerified: true,
+              ageVerificationStatus: "verified",
+              isOver18,
+              ageVerifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+              verificationId: verification.id,
+              notifications: admin.firestore.FieldValue.arrayUnion({
+                type: "age_verified",
+                title: "Age Verification Complete",
+                message: "Your age has been verified successfully.",
+                timestamp: Date.now(),
+                read: false,
+                icon: "shield-check",
+              }),
+            },
+            { merge: true }
+          );
+
+          console.log(`Age verification completed for user ${userId}`);
+        }
+        break;
+      }
+
+      case "identity.verification_session.requires_input": {
+        const verification = event.data.object;
+        const userId = verification.metadata?.firebaseUID;
+
+        if (userId) {
+          const profileRef = admin
+            .firestore()
+            .collection("artifacts")
+            .doc(APP_ID)
+            .collection("public")
+            .doc("data")
+            .collection("profiles")
+            .doc(userId);
+
+          await profileRef.set(
+            {
+              ageVerificationStatus: "requires_input",
+              notifications: admin.firestore.FieldValue.arrayUnion({
+                type: "verification_input_needed",
+                title: "Verification Needs Attention",
+                message: "Please complete your age verification. Additional information may be needed.",
+                timestamp: Date.now(),
+                read: false,
+                icon: "alert",
+              }),
+            },
+            { merge: true }
+          );
+
+          console.log(`Verification requires input for user ${userId}`);
+        }
+        break;
+      }
+
+      case "payment_intent.succeeded": {
+        const paymentIntent = event.data.object;
+        const jobId = paymentIntent.metadata?.jobId;
+        const paymentType = paymentIntent.metadata?.type;
+
+        // Only process escrow payments
+        if (jobId && paymentType === "escrow") {
+          const jobRef = admin
+            .firestore()
+            .collection("artifacts")
+            .doc(APP_ID)
+            .collection("public")
+            .doc("data")
+            .collection("jobs")
+            .doc(jobId);
+
+          await jobRef.set(
+            {
+              paymentStatus: "succeeded",
+              paymentIntentId: paymentIntent.id,
+              paymentCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
+              paymentAmount: paymentIntent.amount / 100, // Convert from cents
+            },
+            { merge: true }
+          );
+
+          console.log(`Escrow payment succeeded for job ${jobId}`);
+        }
+        break;
+      }
+
+      case "payment_intent.canceled": {
+        const paymentIntent = event.data.object;
+        const jobId = paymentIntent.metadata?.jobId;
+        const paymentType = paymentIntent.metadata?.type;
+
+        if (jobId && paymentType === "escrow") {
+          const jobRef = admin
+            .firestore()
+            .collection("artifacts")
+            .doc(APP_ID)
+            .collection("public")
+            .doc("data")
+            .collection("jobs")
+            .doc(jobId);
+
+          await jobRef.set(
+            {
+              paymentStatus: "canceled",
+              paymentCanceledAt: admin.firestore.FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+          );
+
+          console.log(`Escrow payment canceled for job ${jobId}`);
+        }
+        break;
+      }
+
       default:
         console.log(`Unhandled event type: ${event.type}`);
     }
@@ -407,6 +555,275 @@ export const createCustomerPortalSession = functions.https.onCall(async (data, c
   } catch (error: any) {
     console.error("Error creating portal session:", error);
     throw new functions.https.HttpsError("internal", error.message || "Failed to create portal session");
+  }
+});
+
+/**
+ * Create Stripe Identity Verification Session for age verification (18+)
+ * Callable from authenticated users
+ */
+export const createIdentityVerificationSession = functions.https.onCall(async (data, context) => {
+  // Require authentication
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const userId = context.auth.uid;
+  const returnUrl = data?.returnUrl || `${DEFAULT_RETURN_URL}/verification-complete`;
+
+  try {
+    const stripe = initStripe();
+
+    // Create verification session
+    const verificationSession = await stripe.identity.verificationSessions.create({
+      type: "document",
+      metadata: {
+        firebaseUID: userId,
+        appId: APP_ID,
+      },
+      options: {
+        document: {
+          require_id_number: false,
+          require_live_capture: true,
+          require_matching_selfie: true,
+        },
+      },
+      return_url: returnUrl,
+    });
+
+    return {
+      url: verificationSession.url,
+      verificationId: verificationSession.id,
+    };
+  } catch (error: any) {
+    console.error("Error creating identity verification:", error);
+    throw new functions.https.HttpsError("internal", error.message || "Failed to create identity verification");
+  }
+});
+
+/**
+ * Create Escrow Payment for job hiring
+ * Callable from authenticated users (clients hiring tradies)
+ */
+export const createEscrowPayment = functions.https.onCall(async (data, context) => {
+  // Require authentication
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const userId = context.auth.uid;
+  const {
+    jobId,
+    amount, // Amount in GBP (e.g., 100.00)
+    currency = "gbp",
+    tradieAccountId, // Stripe Connect account ID of the tradie
+    description,
+  } = data;
+
+  // Validate required fields
+  if (!jobId || !amount || !tradieAccountId) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Missing required fields: jobId, amount, tradieAccountId"
+    );
+  }
+
+  if (amount <= 0) {
+    throw new functions.https.HttpsError("invalid-argument", "Amount must be greater than 0");
+  }
+
+  try {
+    const stripe = initStripe();
+
+    // Get or create customer
+    const customersRef = admin
+      .firestore()
+      .collection("artifacts")
+      .doc(APP_ID)
+      .collection("public")
+      .doc("data")
+      .collection("stripe_customers")
+      .doc(userId);
+
+    const customerDoc = await customersRef.get();
+    let customerId: string;
+
+    if (customerDoc.exists && customerDoc.data()?.customerId) {
+      customerId = customerDoc.data()!.customerId;
+    } else {
+      // Get user email
+      const userProfile = await admin
+        .firestore()
+        .collection("artifacts")
+        .doc(APP_ID)
+        .collection("public")
+        .doc("data")
+        .collection("profiles")
+        .doc(userId)
+        .get();
+
+      const userEmail = userProfile.data()?.email || context.auth.token.email;
+
+      // Create new Stripe customer
+      const customer = await stripe.customers.create({
+        email: userEmail,
+        metadata: {
+          firebaseUID: userId,
+          appId: APP_ID,
+        },
+      });
+      customerId = customer.id;
+
+      // Save customer ID
+      await customersRef.set({
+        customerId: customer.id,
+        email: userEmail,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    // Calculate application fee (15% platform fee)
+    const applicationFeeAmount = Math.round(amount * 100 * 0.15);
+    const amountInCents = Math.round(amount * 100);
+
+    // Create Payment Intent with manual capture for escrow
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInCents,
+      currency: currency.toLowerCase(),
+      customer: customerId,
+      application_fee_amount: applicationFeeAmount,
+      transfer_data: {
+        destination: tradieAccountId,
+      },
+      metadata: {
+        jobId,
+        firebaseUID: userId,
+        appId: APP_ID,
+        type: "escrow",
+      },
+      description: description || `Payment for job ${jobId}`,
+      capture_method: "manual", // Hold funds until job is completed
+    });
+
+    return {
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+    };
+  } catch (error: any) {
+    console.error("Error creating escrow payment:", error);
+    throw new functions.https.HttpsError("internal", error.message || "Failed to create escrow payment");
+  }
+});
+
+/**
+ * Capture Escrow Payment when job is completed
+ * Callable from authenticated users (tradie or client)
+ */
+export const captureEscrowPayment = functions.https.onCall(async (data, context) => {
+  // Require authentication
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { paymentIntentId, jobId } = data;
+
+  if (!paymentIntentId || !jobId) {
+    throw new functions.https.HttpsError("invalid-argument", "Missing paymentIntentId or jobId");
+  }
+
+  try {
+    const stripe = initStripe();
+
+    // Verify user is authorized for this job
+    const jobDoc = await admin
+      .firestore()
+      .collection("artifacts")
+      .doc(APP_ID)
+      .collection("public")
+      .doc("data")
+      .collection("jobs")
+      .doc(jobId)
+      .get();
+
+    if (!jobDoc.exists) {
+      throw new functions.https.HttpsError("not-found", "Job not found");
+    }
+
+    const jobData = jobDoc.data();
+    const userId = context.auth.uid;
+
+    // Only client or tradie can capture payment
+    if (jobData?.clientUid !== userId && jobData?.tradieUid !== userId) {
+      throw new functions.https.HttpsError("permission-denied", "Not authorized to capture this payment");
+    }
+
+    // Capture the payment
+    const paymentIntent = await stripe.paymentIntents.capture(paymentIntentId);
+
+    return {
+      success: true,
+      status: paymentIntent.status,
+    };
+  } catch (error: any) {
+    console.error("Error capturing escrow payment:", error);
+    throw new functions.https.HttpsError("internal", error.message || "Failed to capture payment");
+  }
+});
+
+/**
+ * Cancel Escrow Payment (refund)
+ * Callable from authenticated users (admin or authorized party)
+ */
+export const cancelEscrowPayment = functions.https.onCall(async (data, context) => {
+  // Require authentication
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated.");
+  }
+
+  const { paymentIntentId, jobId, reason } = data;
+
+  if (!paymentIntentId || !jobId) {
+    throw new functions.https.HttpsError("invalid-argument", "Missing paymentIntentId or jobId");
+  }
+
+  try {
+    const stripe = initStripe();
+
+    // Verify user is authorized for this job
+    const jobDoc = await admin
+      .firestore()
+      .collection("artifacts")
+      .doc(APP_ID)
+      .collection("public")
+      .doc("data")
+      .collection("jobs")
+      .doc(jobId)
+      .get();
+
+    if (!jobDoc.exists) {
+      throw new functions.https.HttpsError("not-found", "Job not found");
+    }
+
+    const jobData = jobDoc.data();
+    const userId = context.auth.uid;
+
+    // Only client or tradie can cancel payment
+    if (jobData?.clientUid !== userId && jobData?.tradieUid !== userId) {
+      throw new functions.https.HttpsError("permission-denied", "Not authorized to cancel this payment");
+    }
+
+    // Cancel the payment intent (releases funds back to customer)
+    const paymentIntent = await stripe.paymentIntents.cancel(paymentIntentId, {
+      cancellation_reason: reason || "requested_by_customer",
+    });
+
+    return {
+      success: true,
+      status: paymentIntent.status,
+    };
+  } catch (error: any) {
+    console.error("Error canceling escrow payment:", error);
+    throw new functions.https.HttpsError("internal", error.message || "Failed to cancel payment");
   }
 });
 
