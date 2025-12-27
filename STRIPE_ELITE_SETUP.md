@@ -53,9 +53,9 @@ The integration uses:
 
 ## Step 2: Frontend Environment Configuration
 
-1. Copy `.env.local.example` to `.env.local`:
+1. Copy `.env.example` to `.env.local`:
    ```bash
-   cp .env.local.example .env.local
+   cp .env.example .env.local
    ```
 
 2. Edit `.env.local` and add your keys:

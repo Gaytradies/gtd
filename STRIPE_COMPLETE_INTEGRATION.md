@@ -177,6 +177,14 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
 VITE_STRIPE_ELITE_PRICE_ID=price_...
 ```
 
+To set up:
+```bash
+# Copy the example file
+cp .env.example .env.local
+
+# Edit .env.local with your actual keys
+```
+
 **Backend (Firebase Functions config):**
 ```bash
 firebase functions:config:set \
