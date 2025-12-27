@@ -8,21 +8,23 @@ const APP_ID = process.env.APP_ID || "gay-tradies-v2";
 const PLATFORM_FEE_PERCENT = 0.15; // 15% platform fee
 const MAX_PAYMENT_AMOUNT = 10000; // Maximum £10,000 per transaction
 
-// Get Firebase Functions config
-const getConfig = () => functions.config();
+// Get Firebase Functions config at module load time
+const config = functions.config();
+const STRIPE_SECRET_KEY = config.stripe?.secret_key;
+const STRIPE_ELITE_PRICE_ID = config.stripe?.elite_price_id;
+const STRIPE_WEBHOOK_SECRET = config.stripe?.webhook_secret;
+const DEFAULT_RETURN_URL = config.app?.default_return_url || "https://gaytradies.com";
 
 // Initialize Stripe - will be loaded lazily when needed
 let stripe: any = null;
 const initStripe = () => {
   if (!stripe) {
-    const config = getConfig();
-    const stripeSecretKey = config.stripe?.secret_key;
-    if (!stripeSecretKey) {
+    if (!STRIPE_SECRET_KEY) {
       throw new Error("STRIPE_SECRET_KEY not configured");
     }
     // Using dynamic import to avoid loading Stripe at cold start
     const Stripe = require("stripe");
-    stripe = new Stripe(stripeSecretKey, {
+    stripe = new Stripe(STRIPE_SECRET_KEY, {
       apiVersion: "2024-12-18.acacia",
     });
   }
@@ -145,11 +147,8 @@ export const createEliteCheckoutSession = functions.https.onCall(async (data, co
 
   try {
     const stripe = initStripe();
-    const config = getConfig();
-    const elitePriceId = config.stripe?.elite_price_id;
-    const defaultReturnUrl = config.app?.default_return_url || "https://gaytradies.com";
 
-    if (!elitePriceId) {
+    if (!STRIPE_ELITE_PRICE_ID) {
       throw new functions.https.HttpsError("failed-precondition", "Stripe Elite Price ID not configured.");
     }
 
@@ -193,14 +192,14 @@ export const createEliteCheckoutSession = functions.https.onCall(async (data, co
       payment_method_types: ["card"],
       line_items: [
         {
-          price: elitePriceId,
+          price: STRIPE_ELITE_PRICE_ID,
           quantity: 1,
         },
       ],
       customer: customerId,
       client_reference_id: userId,
-      success_url: data.successUrl || `${defaultReturnUrl}/elite-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: data.cancelUrl || `${defaultReturnUrl}/shop`,
+      success_url: data.successUrl || `${DEFAULT_RETURN_URL}/elite-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: data.cancelUrl || `${DEFAULT_RETURN_URL}/shop`,
       metadata: {
         firebaseUID: userId,
         appId: APP_ID,
@@ -229,10 +228,8 @@ export const createEliteCheckoutSession = functions.https.onCall(async (data, co
  */
 export const stripeWebhook = functions.https.onRequest(async (req, res) => {
   const sig = req.headers["stripe-signature"];
-  const config = getConfig();
-  const webhookSecret = config.stripe?.webhook_secret;
 
-  if (!sig || !webhookSecret) {
+  if (!sig || !STRIPE_WEBHOOK_SECRET) {
     console.error("Missing signature or webhook secret");
     res.status(400).send("Webhook Error: Missing signature or secret");
     return;
@@ -242,7 +239,7 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
 
   try {
     const stripe = initStripe();
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, webhookSecret);
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, STRIPE_WEBHOOK_SECRET);
   } catch (err: any) {
     console.error("Webhook signature verification failed:", err.message);
     res.status(400).send(`Webhook Error: ${err.message}`);
@@ -570,8 +567,6 @@ export const createCustomerPortalSession = functions.https.onCall(async (data, c
 
   try {
     const stripe = initStripe();
-    const config = getConfig();
-    const defaultReturnUrl = config.app?.default_return_url || "https://gaytradies.com";
 
     // Get customer ID from Firestore
     const customerDoc = await admin
@@ -593,7 +588,7 @@ export const createCustomerPortalSession = functions.https.onCall(async (data, c
     // Create portal session
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: data.returnUrl || `${defaultReturnUrl}/settings`,
+      return_url: data.returnUrl || `${DEFAULT_RETURN_URL}/settings`,
     });
 
     return {
@@ -616,9 +611,7 @@ export const createIdentityVerificationSession = functions.https.onCall(async (d
   }
 
   const userId = context.auth.uid;
-  const config = getConfig();
-  const defaultReturnUrl = config.app?.default_return_url || "https://gaytradies.com";
-  const returnUrl = data?.returnUrl || `${defaultReturnUrl}/verification-complete`;
+  const returnUrl = data?.returnUrl || `${DEFAULT_RETURN_URL}/verification-complete`;
 
   // Validate return URL to prevent open redirects
   if (!isValidReturnUrl(returnUrl)) {
