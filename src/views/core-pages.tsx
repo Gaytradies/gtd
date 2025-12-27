@@ -62,9 +62,65 @@ const processImageToWebP = (file, { maxSizeBytes = 600 * 1024, maxWidth = 1280, 
 
 // --- Shop, Job Board, Chat, Profile (Mostly GT1 Structure) ---
 
-const Shop = () => {
-    const handleSubscribeElite = () => {
-        window.location.href = "https://buy.stripe.com/14AbJ13P36bHbAzbND6c000";
+const Shop = ({ user }) => {
+    const [isProcessing, setIsProcessing] = useState(false);
+    
+    const handleSubscribeElite = async () => {
+        if (!user) {
+            alert('Please sign in to subscribe to Elite membership');
+            return;
+        }
+        
+        setIsProcessing(true);
+        try {
+            // Get Stripe publishable key from environment
+            const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+            
+            if (!publishableKey) {
+                console.error('Stripe publishable key not configured');
+                alert('Payment system is not configured. Please contact support.');
+                setIsProcessing(false);
+                return;
+            }
+            
+            // Import Stripe dynamically
+            const { loadStripe } = await import('@stripe/stripe-js');
+            const stripe = await loadStripe(publishableKey);
+            
+            if (!stripe) {
+                throw new Error('Failed to load Stripe');
+            }
+            
+            // Call Firebase Function to create checkout session
+            const { httpsCallable } = await import('firebase/functions');
+            const { functions } = await import('../config/firebase');
+            
+            if (!functions) {
+                throw new Error('Firebase Functions not initialized');
+            }
+            
+            const createCheckoutSession = httpsCallable(functions, 'createEliteCheckoutSession');
+            const result = await createCheckoutSession({
+                email: user.email,
+                successUrl: `${window.location.origin}/elite-success`,
+                cancelUrl: `${window.location.origin}/shop`,
+            }) as { data: { sessionId: string; url: string } };
+            
+            // Redirect to Stripe Checkout
+            const { error } = await stripe.redirectToCheckout({
+                sessionId: result.data.sessionId,
+            });
+            
+            if (error) {
+                console.error('Stripe redirect error:', error);
+                alert('Failed to redirect to checkout. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error creating checkout session:', error);
+            alert('Failed to start checkout process. Please try again or contact support.');
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     // Features page - GayTradies Elite
@@ -134,9 +190,10 @@ const Shop = () => {
                         </div>
                         <button 
                             onClick={handleSubscribeElite}
-                            className="w-full py-4 rounded-xl bg-gradient-to-r from-orange-500 via-orange-600 to-orange-500 text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2"
+                            disabled={isProcessing}
+                            className="w-full py-4 rounded-xl bg-gradient-to-r from-orange-500 via-orange-600 to-orange-500 text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Join GayTradies Elite
+                            {isProcessing ? 'Processing...' : 'Join GayTradies Elite'}
                         </button>
                         <p className="text-center text-xs text-slate-500 mt-3">
                             Includes 3-day free trial. You won't be charged until trial ends.
