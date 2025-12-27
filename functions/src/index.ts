@@ -5,15 +5,18 @@ import * as admin from "firebase-admin";
 admin.initializeApp();
 
 const APP_ID = process.env.APP_ID || "gay-tradies-v2";
-const DEFAULT_RETURN_URL = process.env.DEFAULT_RETURN_URL || "https://gaytradies.com";
 const PLATFORM_FEE_PERCENT = 0.15; // 15% platform fee
 const MAX_PAYMENT_AMOUNT = 10000; // Maximum £10,000 per transaction
+
+// Get Firebase Functions config
+const getConfig = () => functions.config();
 
 // Initialize Stripe - will be loaded lazily when needed
 let stripe: any = null;
 const initStripe = () => {
   if (!stripe) {
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const config = getConfig();
+    const stripeSecretKey = config.stripe?.secret_key;
     if (!stripeSecretKey) {
       throw new Error("STRIPE_SECRET_KEY not configured");
     }
@@ -142,7 +145,9 @@ export const createEliteCheckoutSession = functions.https.onCall(async (data, co
 
   try {
     const stripe = initStripe();
-    const elitePriceId = process.env.STRIPE_ELITE_PRICE_ID;
+    const config = getConfig();
+    const elitePriceId = config.stripe?.elite_price_id;
+    const defaultReturnUrl = config.app?.default_return_url || "https://gaytradies.com";
 
     if (!elitePriceId) {
       throw new functions.https.HttpsError("failed-precondition", "Stripe Elite Price ID not configured.");
@@ -194,8 +199,8 @@ export const createEliteCheckoutSession = functions.https.onCall(async (data, co
       ],
       customer: customerId,
       client_reference_id: userId,
-      success_url: data.successUrl || `${DEFAULT_RETURN_URL}/elite-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: data.cancelUrl || `${DEFAULT_RETURN_URL}/shop`,
+      success_url: data.successUrl || `${defaultReturnUrl}/elite-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: data.cancelUrl || `${defaultReturnUrl}/shop`,
       metadata: {
         firebaseUID: userId,
         appId: APP_ID,
@@ -224,7 +229,8 @@ export const createEliteCheckoutSession = functions.https.onCall(async (data, co
  */
 export const stripeWebhook = functions.https.onRequest(async (req, res) => {
   const sig = req.headers["stripe-signature"];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const config = getConfig();
+  const webhookSecret = config.stripe?.webhook_secret;
 
   if (!sig || !webhookSecret) {
     console.error("Missing signature or webhook secret");
@@ -564,6 +570,8 @@ export const createCustomerPortalSession = functions.https.onCall(async (data, c
 
   try {
     const stripe = initStripe();
+    const config = getConfig();
+    const defaultReturnUrl = config.app?.default_return_url || "https://gaytradies.com";
 
     // Get customer ID from Firestore
     const customerDoc = await admin
@@ -585,7 +593,7 @@ export const createCustomerPortalSession = functions.https.onCall(async (data, c
     // Create portal session
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: data.returnUrl || `${DEFAULT_RETURN_URL}/settings`,
+      return_url: data.returnUrl || `${defaultReturnUrl}/settings`,
     });
 
     return {
@@ -608,7 +616,9 @@ export const createIdentityVerificationSession = functions.https.onCall(async (d
   }
 
   const userId = context.auth.uid;
-  const returnUrl = data?.returnUrl || `${DEFAULT_RETURN_URL}/verification-complete`;
+  const config = getConfig();
+  const defaultReturnUrl = config.app?.default_return_url || "https://gaytradies.com";
+  const returnUrl = data?.returnUrl || `${defaultReturnUrl}/verification-complete`;
 
   // Validate return URL to prevent open redirects
   if (!isValidReturnUrl(returnUrl)) {
