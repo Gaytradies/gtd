@@ -136,6 +136,26 @@ export default function App() {
     initializeFirebase();
   }, []);
 
+  // Handle URL parameters for Stripe success/cancel redirects
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    const pathname = window.location.pathname;
+    
+    // Handle Elite subscription success
+    if (pathname.includes('elite-success') && sessionId) {
+      // Show success message and redirect to shop
+      setTimeout(() => {
+        showToast('Elite Membership activated! Welcome to GayTradies Elite! 🌟', 'success');
+        setView('shop');
+        // Clear URL parameters
+        window.history.replaceState({}, '', '/');
+      }, 500);
+    }
+  }, []);
+
   // Auth Init
   useEffect(() => {
     if (!auth) {
@@ -560,7 +580,7 @@ export default function App() {
           showToast("Failed to sign out", "error");
         }
       }} showToast={showToast} onEnableLocation={updateLocation} onNavigate={setView} profilePictureRequests={profilePictureRequests} />;
-      case 'settings': return <SettingsScreen user={user} profile={userProfile} onBack={() => setView('profile')} showToast={showToast} />;
+      case 'settings': return <SettingsScreen user={user} profile={userProfile} onBack={() => setView('profile')} onNavigate={setView} showToast={showToast} />;
       case 'workCalendar': return <WorkCalendar user={user} profile={userProfile} onBack={() => setView('profile')} showToast={showToast} />;
       case 'paymentsCredits': return <PaymentsCredits user={user} profile={userProfile} onBack={() => setView('profile')} showToast={showToast} />;
       case 'safety': return <SafetyCentre user={user} onBack={() => setView('profile')} showToast={showToast} />;
