@@ -433,6 +433,13 @@
             });
         }
 
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // Render file list
         function renderFileList() {
             const fileList = document.getElementById('fileList');
@@ -449,10 +456,11 @@
             fileList.innerHTML = uploadedFiles.map((file, index) => {
                 const icon = getFileIcon(file.name);
                 const selected = selectedFile === index ? 'selected' : '';
+                const safeName = escapeHtml(file.name);
                 return `
                     <div class="file-item ${selected}" onclick="selectFile(${index})">
                         <span class="file-icon">${icon}</span>
-                        <span>${file.name}</span>
+                        <span>${safeName}</span>
                     </div>
                 `;
             }).join('');
@@ -460,7 +468,8 @@
 
         // Get file icon based on extension
         function getFileIcon(filename) {
-            const ext = filename.split('.').pop().toLowerCase();
+            const parts = filename.split('.');
+            const ext = parts.length > 1 ? parts.pop().toLowerCase() : '';
             const icons = {
                 'js': '📜',
                 'ts': '📘',
@@ -556,10 +565,15 @@
             const cursor = currentLineDiv.querySelector('.cursor');
             if (cursor) cursor.remove();
 
-            // Create new line
+            // Remove id from old currentLine to prevent duplicates
+            const oldCurrentLine = document.getElementById('currentLine');
+            if (oldCurrentLine) oldCurrentLine.removeAttribute('id');
+
+            // Create new line with escaped text
             const newLine = document.createElement('div');
             newLine.className = 'terminal-line';
-            newLine.innerHTML = `<span class="ps-prompt">PS</span> <span class="ps-path">C:\\gaytradies.com\\code&gt;</span> <span class="ps-output">${text}</span>`;
+            const safeText = escapeHtml(text);
+            newLine.innerHTML = `<span class="ps-prompt">PS</span> <span class="ps-path">C:\\gaytradies.com\\code&gt;</span> <span class="ps-output">${safeText}</span>`;
             
             // Create new current line with cursor
             const newCurrentLine = document.createElement('div');
