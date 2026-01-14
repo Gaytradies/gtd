@@ -441,9 +441,14 @@
         function getPrompt() {
             if (selectedFileName) {
                 const nameParts = selectedFileName.split('.');
-                const ext = nameParts.pop();
-                const baseName = nameParts.join('.');
-                return `<span class="ps-prompt">PS</span> <span class="ps-path">C:\\Users\\ranso\\gtd&gt;[${escapeHtml(baseName)}.<span style="color: #0f0;">${escapeHtml(ext)}</span>]</span>`;
+                if (nameParts.length > 1) {
+                    const ext = nameParts.pop();
+                    const baseName = nameParts.join('.');
+                    return `<span class="ps-prompt">PS</span> <span class="ps-path">C:\\Users\\ranso\\gtd&gt;[${escapeHtml(baseName)}.<span style="color: #0f0;">${escapeHtml(ext)}</span>]</span>`;
+                } else {
+                    // File has no extension
+                    return `<span class="ps-prompt">PS</span> <span class="ps-path">C:\\Users\\ranso\\gtd&gt;[${escapeHtml(selectedFileName)}]</span>`;
+                }
             }
             return `<span class="ps-prompt">PS</span> <span class="ps-path">C:\\Users\\ranso\\gtd&gt;</span>`;
         }
