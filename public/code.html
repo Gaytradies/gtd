@@ -605,10 +605,8 @@
             freeCodingMode = !freeCodingMode;
             
             if (freeCodingMode) {
-                // Entering free coding mode
+                // Entering free coding mode - just track the starting position
                 freeCodingStartPosition = currentPosition;
-                addTerminalLine('');
-                addTerminalLine('[FREE CODING MODE ENABLED] - Type freely. Press Alt again to auto-correct.');
             } else {
                 // Exiting free coding mode - auto-correct to match file
                 if (selectedFile !== null) {
@@ -625,16 +623,10 @@
                     
                     // Update character count
                     document.getElementById('charCount').textContent = currentPosition;
-                    
-                    addTerminalLine('');
-                    addTerminalLine('[FREE CODING MODE DISABLED] - Content auto-corrected to match file.');
-                } else {
-                    addTerminalLine('');
-                    addTerminalLine('[FREE CODING MODE DISABLED]');
                 }
             }
             
-            // Update status bar or add visual indicator
+            // Update status bar indicator
             updateModeIndicator();
         }
 
