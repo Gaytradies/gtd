@@ -353,13 +353,13 @@
             </div>
             <div class="terminal-content" id="terminal" tabindex="0">
                 <div class="terminal-line">
-                    <span class="ps-prompt">PS</span> <span class="ps-path">C:\gaytradies.com\code&gt;</span> <span class="ps-output">Welcome to GayTradies Web Developer Console</span>
+                    <span class="ps-prompt">PS</span> <span class="ps-path">C:\Users\ranso\gtd&gt;</span> <span class="ps-output">Welcome to GayTradies Web Developer Console</span>
                 </div>
                 <div class="terminal-line">
-                    <span class="ps-prompt">PS</span> <span class="ps-path">C:\gaytradies.com\code&gt;</span> <span class="ps-output">Upload a file and press any key to start typing code...</span>
+                    <span class="ps-prompt">PS</span> <span class="ps-path">C:\Users\ranso\gtd&gt;</span> <span class="ps-output">Upload a file to begin...</span>
                 </div>
                 <div class="terminal-line">
-                    <span class="ps-prompt">PS</span> <span class="ps-path">C:\gaytradies.com\code&gt;</span> <span class="ps-output" id="currentLine"></span><span class="cursor"></span>
+                    <span class="ps-prompt">PS</span> <span class="ps-path">C:\Users\ranso\gtd&gt;</span> <span class="ps-output" id="currentLine"></span><span class="cursor"></span>
                 </div>
             </div>
             <div class="status-bar">
@@ -395,6 +395,8 @@
         let terminalContent = '';
         let freeCodingMode = false;
         let freeCodingStartPosition = 0;
+        let selectedFileName = '';
+        let isSimulatingCommands = false;
 
         // Initialize
         document.getElementById('fileInput').addEventListener('change', handleFileUpload);
@@ -433,6 +435,17 @@
                 reader.onerror = (e) => reject(e);
                 reader.readAsText(file);
             });
+        }
+
+        // Get the appropriate prompt based on selected file
+        function getPrompt() {
+            if (selectedFileName) {
+                const nameParts = selectedFileName.split('.');
+                const ext = nameParts.pop();
+                const baseName = nameParts.join('.');
+                return `<span class="ps-prompt">PS</span> <span class="ps-path">C:\\Users\\ranso\\gtd&gt;[${escapeHtml(baseName)}.<span style="color: #0f0;">${escapeHtml(ext)}</span>]</span>`;
+            }
+            return `<span class="ps-prompt">PS</span> <span class="ps-path">C:\\Users\\ranso\\gtd&gt;</span>`;
         }
 
         // Escape HTML to prevent XSS
@@ -495,10 +508,11 @@
         }
 
         // Select file
-        function selectFile(index) {
+        async function selectFile(index) {
             selectedFile = index;
             currentContent = uploadedFiles[index].content;
             currentPosition = 0;
+            selectedFileName = uploadedFiles[index].name;
             
             // Update UI
             renderFileList();
@@ -506,16 +520,75 @@
             document.getElementById('totalChars').textContent = currentContent.length;
             document.getElementById('charCount').textContent = '0';
             
-            // Add selection message to terminal
-            addTerminalLine(`File selected: ${uploadedFiles[index].name} (${currentContent.length} characters)`);
-            addTerminalLine('Press any key to start typing code...');
+            // Simulate typing commands to navigate and create file
+            isSimulatingCommands = true;
+            await simulateCommands();
+            isSimulatingCommands = false;
             
             // Focus terminal
             document.getElementById('terminal').focus();
         }
 
+        // Simulate typing commands to cd into directory and create file
+        async function simulateCommands() {
+            const terminal = document.getElementById('terminal');
+            
+            // Remove cursor from current line
+            const currentLineDiv = terminal.querySelector('.terminal-line:last-child');
+            const cursor = currentLineDiv.querySelector('.cursor');
+            if (cursor) cursor.remove();
+            
+            // Remove id from old currentLine
+            const oldCurrentLine = document.getElementById('currentLine');
+            if (oldCurrentLine) oldCurrentLine.removeAttribute('id');
+            
+            // Simulate cd command
+            const cdLine = document.createElement('div');
+            cdLine.className = 'terminal-line';
+            cdLine.innerHTML = `${getPrompt()} <span class="ps-output">cd C:\\Users\\ranso\\gtd</span>`;
+            terminal.appendChild(cdLine);
+            
+            await sleep(300);
+            
+            // Show empty prompt after cd
+            const afterCdLine = document.createElement('div');
+            afterCdLine.className = 'terminal-line';
+            afterCdLine.innerHTML = getPrompt();
+            terminal.appendChild(afterCdLine);
+            
+            await sleep(300);
+            
+            // Simulate file creation command
+            const createLine = document.createElement('div');
+            createLine.className = 'terminal-line';
+            createLine.innerHTML = `${getPrompt()} <span class="ps-output">New-Item -ItemType File -Name "${escapeHtml(selectedFileName)}"</span>`;
+            terminal.appendChild(createLine);
+            
+            await sleep(300);
+            
+            // Create new current line with cursor for typing code
+            const newCurrentLine = document.createElement('div');
+            newCurrentLine.className = 'terminal-line';
+            newCurrentLine.innerHTML = `${getPrompt()} <span class="ps-output" id="currentLine"></span><span class="cursor"></span>`;
+            terminal.appendChild(newCurrentLine);
+            
+            // Auto-scroll
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Sleep helper
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
         // Handle key press
         function handleKeyPress(event) {
+            // Ignore keys during command simulation
+            if (isSimulatingCommands) {
+                event.preventDefault();
+                return;
+            }
+            
             // Handle Alt key toggle for free coding mode
             if (event.key === 'Alt') {
                 event.preventDefault();
@@ -686,12 +759,12 @@
             const newLine = document.createElement('div');
             newLine.className = 'terminal-line';
             const safeText = escapeHtml(text);
-            newLine.innerHTML = `<span class="ps-prompt">PS</span> <span class="ps-path">C:\\gaytradies.com\\code&gt;</span> <span class="ps-output">${safeText}</span>`;
+            newLine.innerHTML = `${getPrompt()} <span class="ps-output">${safeText}</span>`;
             
             // Create new current line with cursor
             const newCurrentLine = document.createElement('div');
             newCurrentLine.className = 'terminal-line';
-            newCurrentLine.innerHTML = `<span class="ps-prompt">PS</span> <span class="ps-path">C:\\gaytradies.com\\code&gt;</span> <span class="ps-output" id="currentLine"></span><span class="cursor"></span>`;
+            newCurrentLine.innerHTML = `${getPrompt()} <span class="ps-output" id="currentLine"></span><span class="cursor"></span>`;
             
             terminal.appendChild(newLine);
             terminal.appendChild(newCurrentLine);
@@ -705,13 +778,14 @@
             terminalContent = '';
             freeCodingMode = false;
             freeCodingStartPosition = 0;
+            selectedFileName = '';
             const terminal = document.getElementById('terminal');
             terminal.innerHTML = `
                 <div class="terminal-line">
-                    <span class="ps-prompt">PS</span> <span class="ps-path">C:\\gaytradies.com\\code&gt;</span> <span class="ps-output">Terminal cleared.</span>
+                    ${getPrompt()} <span class="ps-output">Terminal cleared.</span>
                 </div>
                 <div class="terminal-line">
-                    <span class="ps-prompt">PS</span> <span class="ps-path">C:\\gaytradies.com\\code&gt;</span> <span class="ps-output" id="currentLine"></span><span class="cursor"></span>
+                    ${getPrompt()} <span class="ps-output" id="currentLine"></span><span class="cursor"></span>
                 </div>
             `;
             updateModeIndicator();
