@@ -612,16 +612,19 @@
             } else {
                 // Exiting free coding mode - auto-correct to match file
                 if (selectedFile !== null) {
-                    // Replace everything from start position with correct content from file
-                    const correctContent = currentContent.slice(0, currentPosition);
-                    const beforeFreeMode = terminalContent.slice(0, terminalContent.lastIndexOf(currentContent.slice(freeCodingStartPosition, currentPosition)));
+                    // Determine how many characters should actually be there
+                    const targetPosition = freeCodingStartPosition + (currentPosition - freeCodingStartPosition);
                     
-                    // Simply sync back to the correct file content
-                    terminalContent = currentContent.slice(0, currentPosition);
+                    // Sync back to the correct file content at the position we're at
+                    terminalContent = currentContent.slice(0, targetPosition);
+                    currentPosition = targetPosition;
                     
                     // Update display
                     const currentLineElement = document.getElementById('currentLine');
                     currentLineElement.textContent = terminalContent;
+                    
+                    // Update character count
+                    document.getElementById('charCount').textContent = currentPosition;
                     
                     addTerminalLine('');
                     addTerminalLine('[FREE CODING MODE DISABLED] - Content auto-corrected to match file.');
@@ -649,9 +652,6 @@
                 currentPosition++;
             } else if (char === 'Tab') {
                 terminalContent += '\t';
-                currentPosition++;
-            } else if (char === 'Space') {
-                terminalContent += ' ';
                 currentPosition++;
             }
             
