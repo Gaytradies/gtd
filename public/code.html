@@ -393,6 +393,8 @@
         let currentContent = '';
         let currentPosition = 0;
         let terminalContent = '';
+        let freeCodingMode = false;
+        let freeCodingStartPosition = 0;
 
         // Initialize
         document.getElementById('fileInput').addEventListener('change', handleFileUpload);
@@ -514,13 +516,33 @@
 
         // Handle key press
         function handleKeyPress(event) {
+            // Handle Alt key toggle for free coding mode
+            if (event.key === 'Alt') {
+                event.preventDefault();
+                toggleFreeCodingMode();
+                return;
+            }
+
+            // Handle Backspace - delete last character
+            if (event.key === 'Backspace') {
+                event.preventDefault();
+                deleteLastCharacter();
+                return;
+            }
+
             // Prevent default behavior for most keys
             if (!event.ctrlKey && !event.metaKey && event.key !== 'F5') {
                 event.preventDefault();
             }
 
             // Ignore modifier keys alone
-            if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(event.key)) {
+            if (['Shift', 'Control', 'Meta', 'CapsLock'].includes(event.key)) {
+                return;
+            }
+
+            // Free coding mode - type whatever you want
+            if (freeCodingMode) {
+                handleFreeCoding(event);
                 return;
             }
 
@@ -554,6 +576,105 @@
             // Auto-scroll to bottom
             const terminal = document.getElementById('terminal');
             terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Delete last character
+        function deleteLastCharacter() {
+            if (terminalContent.length === 0) {
+                return; // Nothing to delete
+            }
+
+            // Remove last character
+            terminalContent = terminalContent.slice(0, -1);
+            
+            // Adjust position if not in free coding mode
+            if (!freeCodingMode && currentPosition > 0) {
+                currentPosition--;
+            }
+
+            // Update display
+            const currentLineElement = document.getElementById('currentLine');
+            currentLineElement.textContent = terminalContent;
+            
+            // Update character count
+            document.getElementById('charCount').textContent = currentPosition;
+        }
+
+        // Toggle free coding mode
+        function toggleFreeCodingMode() {
+            freeCodingMode = !freeCodingMode;
+            
+            if (freeCodingMode) {
+                // Entering free coding mode
+                freeCodingStartPosition = currentPosition;
+                addTerminalLine('');
+                addTerminalLine('[FREE CODING MODE ENABLED] - Type freely. Press Alt again to auto-correct.');
+            } else {
+                // Exiting free coding mode - auto-correct to match file
+                if (selectedFile !== null) {
+                    // Replace everything from start position with correct content from file
+                    const correctContent = currentContent.slice(0, currentPosition);
+                    const beforeFreeMode = terminalContent.slice(0, terminalContent.lastIndexOf(currentContent.slice(freeCodingStartPosition, currentPosition)));
+                    
+                    // Simply sync back to the correct file content
+                    terminalContent = currentContent.slice(0, currentPosition);
+                    
+                    // Update display
+                    const currentLineElement = document.getElementById('currentLine');
+                    currentLineElement.textContent = terminalContent;
+                    
+                    addTerminalLine('');
+                    addTerminalLine('[FREE CODING MODE DISABLED] - Content auto-corrected to match file.');
+                } else {
+                    addTerminalLine('');
+                    addTerminalLine('[FREE CODING MODE DISABLED]');
+                }
+            }
+            
+            // Update status bar or add visual indicator
+            updateModeIndicator();
+        }
+
+        // Handle free coding input
+        function handleFreeCoding(event) {
+            // Get the actual character typed
+            const char = event.key;
+            
+            // Only add printable characters
+            if (char.length === 1) {
+                terminalContent += char;
+                currentPosition++;
+            } else if (char === 'Enter') {
+                terminalContent += '\n';
+                currentPosition++;
+            } else if (char === 'Tab') {
+                terminalContent += '\t';
+                currentPosition++;
+            } else if (char === 'Space') {
+                terminalContent += ' ';
+                currentPosition++;
+            }
+            
+            // Update display
+            const currentLineElement = document.getElementById('currentLine');
+            currentLineElement.textContent = terminalContent;
+            
+            // Update character count
+            document.getElementById('charCount').textContent = currentPosition;
+            
+            // Auto-scroll to bottom
+            const terminal = document.getElementById('terminal');
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Update mode indicator in UI
+        function updateModeIndicator() {
+            const statusReady = document.querySelector('.status-bar .status-item:last-child span');
+            if (statusReady) {
+                statusReady.textContent = freeCodingMode ? 'FREE CODING MODE' : 'Ready';
+                statusReady.style.color = freeCodingMode ? '#f1d56f' : '#fff';
+                statusReady.style.fontWeight = freeCodingMode ? 'bold' : 'normal';
+            }
         }
 
         // Add a new line to terminal
@@ -590,6 +711,8 @@
         // Clear terminal
         function clearTerminal() {
             terminalContent = '';
+            freeCodingMode = false;
+            freeCodingStartPosition = 0;
             const terminal = document.getElementById('terminal');
             terminal.innerHTML = `
                 <div class="terminal-line">
@@ -599,6 +722,7 @@
                     <span class="ps-prompt">PS</span> <span class="ps-path">C:\\gaytradies.com\\code&gt;</span> <span class="ps-output" id="currentLine"></span><span class="cursor"></span>
                 </div>
             `;
+            updateModeIndicator();
             document.getElementById('terminal').focus();
         }
 
