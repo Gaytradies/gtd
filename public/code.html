@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GayTradies.com - Web Developer Console</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Courier New', monospace;
+            background: #012456;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar - File Explorer */
+        .sidebar {
+            width: 300px;
+            background: #1e1e1e;
+            border-right: 2px solid #007acc;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            background: #007acc;
+            padding: 15px;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #005a9e;
+        }
+
+        .file-upload {
+            padding: 15px;
+            background: #252526;
+            border-bottom: 1px solid #3e3e42;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .upload-btn {
+            width: 100%;
+            padding: 10px;
+            background: #0e639c;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .upload-btn:hover {
+            background: #1177bb;
+        }
+
+        .file-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .file-item {
+            padding: 8px 12px;
+            margin: 3px 0;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            transition: background 0.2s;
+            word-break: break-word;
+        }
+
+        .file-item:hover {
+            background: #2a2d2e;
+        }
+
+        .file-item.selected {
+            background: #094771;
+            color: #fff;
+        }
+
+        .file-icon {
+            margin-right: 8px;
+            font-size: 14px;
+        }
+
+        /* Terminal */
+        .terminal-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #012456;
+        }
+
+        .terminal-header {
+            background: #1e1e1e;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #007acc;
+        }
+
+        .terminal-title {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .terminal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .terminal-btn {
+            padding: 6px 15px;
+            background: #0e639c;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 11px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .terminal-btn:hover {
+            background: #1177bb;
+        }
+
+        .terminal-btn.clear {
+            background: #c72e0d;
+        }
+
+        .terminal-btn.clear:hover {
+            background: #e73c18;
+        }
+
+        .terminal-btn.save {
+            background: #0aa34d;
+        }
+
+        .terminal-btn.save:hover {
+            background: #0cc45f;
+        }
+
+        .terminal-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .terminal-line {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .ps-prompt {
+            color: #5af78e;
+            font-weight: bold;
+        }
+
+        .ps-path {
+            color: #f1d56f;
+        }
+
+        .ps-output {
+            color: #ffffff;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background: #fff;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        /* Status bar */
+        .status-bar {
+            background: #007acc;
+            padding: 8px 20px;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #005a9e;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #424242;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4e4e4e;
+        }
+
+        /* Modal for save dialog */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 5px;
+            border: 2px solid #007acc;
+            min-width: 400px;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px;
+            background: #252526;
+            border: 1px solid #3e3e42;
+            color: #fff;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            border-radius: 3px;
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .modal-btn.primary {
+            background: #0e639c;
+            color: #fff;
+        }
+
+        .modal-btn.primary:hover {
+            background: #1177bb;
+        }
+
+        .modal-btn.secondary {
+            background: #3e3e42;
+            color: #fff;
+        }
+
+        .modal-btn.secondary:hover {
+            background: #4e4e4e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                📁 File Explorer
+            </div>
+            <div class="file-upload">
+                <input type="file" id="fileInput" multiple accept="*/*">
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    ⬆️ Upload Files
+                </button>
+            </div>
+            <div class="file-list" id="fileList">
+                <div style="padding: 20px; text-align: center; color: #888; font-size: 11px;">
+                    No files uploaded yet.<br>Click "Upload Files" to get started.
+                </div>
+            </div>
+        </div>
+
+        <!-- Terminal -->
+        <div class="terminal-container">
+            <div class="terminal-header">
+                <div class="terminal-title">
+                    🪟 PowerShell - gaytradies.com/code
+                </div>
+                <div class="terminal-buttons">
+                    <button class="terminal-btn clear" onclick="clearTerminal()">Clear</button>
+                    <button class="terminal-btn save" onclick="showSaveDialog()">Save As...</button>
+                </div>
+            </div>
+            <div class="terminal-content" id="terminal" tabindex="0">
+                <div class="terminal-line">
+                    <span class="ps-prompt">PS</span> <span class="ps-path">C:\Users\ranso\gtd&gt;</span> <span class="ps-output">Welcome to GayTradies Web Developer Console</span>
+                </div>
+                <div class="terminal-line">
+                    <span class="ps-prompt">PS</span> <span class="ps-path">C:\Users\ranso\gtd&gt;</span> <span class="ps-output">Upload a file to begin...</span>
+                </div>
+                <div class="terminal-line">
+                    <span class="ps-prompt">PS</span> <span class="ps-path">C:\Users\ranso\gtd&gt;</span> <span class="ps-output" id="currentLine"></span><span class="cursor"></span>
+                </div>
+            </div>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span>Selected: <span id="selectedFile">None</span></span>
+                    <span>Characters: <span id="charCount">0</span> / <span id="totalChars">0</span></span>
+                </div>
+                <div class="status-item">
+                    <span id="modeIndicator">Ready</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Dialog Modal -->
+    <div class="modal" id="saveModal">
+        <div class="modal-content">
+            <div class="modal-title">💾 Save File As</div>
+            <input type="text" class="modal-input" id="saveFileName" placeholder="Enter filename (e.g., mycode.js)">
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" onclick="closeSaveDialog()">Cancel</button>
+                <button class="modal-btn primary" onclick="saveFile()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let uploadedFiles = [];
+        let selectedFile = null;
+        let currentContent = '';
+        let currentPosition = 0;
+        let terminalContent = '';
+        let freeCodingMode = false;
+        let freeCodingStartPosition = 0;
+        let selectedFileName = '';
+        let isSimulatingCommands = false;
+
+        // Initialize
+        document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+        document.getElementById('terminal').addEventListener('keydown', handleKeyPress);
+        document.getElementById('saveFileName').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') saveFile();
+        });
+
+        // Focus terminal on load
+        window.addEventListener('load', () => {
+            document.getElementById('terminal').focus();
+        });
+
+        // Handle file upload
+        async function handleFileUpload(event) {
+            const files = Array.from(event.target.files);
+            
+            for (const file of files) {
+                const content = await readFileContent(file);
+                uploadedFiles.push({
+                    name: file.name,
+                    content: content,
+                    size: file.size
+                });
+            }
+
+            renderFileList();
+            event.target.value = ''; // Reset input
+        }
+
+        // Read file content
+        function readFileContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e);
+                reader.readAsText(file);
+            });
+        }
+
+        // Get the appropriate prompt based on selected file
+        function getPrompt() {
+            if (selectedFileName) {
+                const nameParts = selectedFileName.split('.');
+                if (nameParts.length > 1) {
+                    const ext = nameParts.pop();
+                    const baseName = nameParts.join('.');
+                    return `<span class="ps-prompt">PS</span> <span class="ps-path">C:\\Users\\ranso\\gtd&gt;[${escapeHtml(baseName)}.<span style="color: #0f0;">${escapeHtml(ext)}</span>]</span>`;
+                } else {
+                    // File has no extension
+                    return `<span class="ps-prompt">PS</span> <span class="ps-path">C:\\Users\\ranso\\gtd&gt;[${escapeHtml(selectedFileName)}]</span>`;
+                }
+            }
+            return `<span class="ps-prompt">PS</span> <span class="ps-path">C:\\Users\\ranso\\gtd&gt;</span>`;
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Render file list
+        function renderFileList() {
+            const fileList = document.getElementById('fileList');
+            
+            if (uploadedFiles.length === 0) {
+                fileList.innerHTML = `
+                    <div style="padding: 20px; text-align: center; color: #888; font-size: 11px;">
+                        No files uploaded yet.<br>Click "Upload Files" to get started.
+                    </div>
+                `;
+                return;
+            }
+
+            fileList.innerHTML = uploadedFiles.map((file, index) => {
+                const icon = getFileIcon(file.name);
+                const selected = selectedFile === index ? 'selected' : '';
+                const safeName = escapeHtml(file.name);
+                return `
+                    <div class="file-item ${selected}" onclick="selectFile(${index})">
+                        <span class="file-icon">${icon}</span>
+                        <span>${safeName}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Get file icon based on extension
+        function getFileIcon(filename) {
+            const parts = filename.split('.');
+            const ext = parts.length > 1 ? parts.pop().toLowerCase() : '';
+            const icons = {
+                'js': '📜',
+                'ts': '📘',
+                'html': '🌐',
+                'css': '🎨',
+                'json': '📋',
+                'md': '📝',
+                'txt': '📄',
+                'py': '🐍',
+                'java': '☕',
+                'cpp': '⚙️',
+                'c': '⚙️',
+                'php': '🐘',
+                'rb': '💎',
+                'go': '🔵',
+                'rs': '🦀',
+                'sh': '🐚',
+                'sql': '🗄️'
+            };
+            return icons[ext] || '📄';
+        }
+
+        // Select file
+        async function selectFile(index) {
+            selectedFile = index;
+            currentContent = uploadedFiles[index].content;
+            currentPosition = 0;
+            selectedFileName = uploadedFiles[index].name;
+            
+            // Update UI
+            renderFileList();
+            document.getElementById('selectedFile').textContent = uploadedFiles[index].name;
+            document.getElementById('totalChars').textContent = currentContent.length;
+            document.getElementById('charCount').textContent = '0';
+            
+            // Simulate typing commands to navigate and create file
+            isSimulatingCommands = true;
+            await simulateCommands();
+            isSimulatingCommands = false;
+            
+            // Focus terminal
+            document.getElementById('terminal').focus();
+        }
+
+        // Simulate typing commands to cd into directory and create file
+        async function simulateCommands() {
+            const terminal = document.getElementById('terminal');
+            
+            // Remove cursor from current line
+            const currentLineDiv = terminal.querySelector('.terminal-line:last-child');
+            const cursor = currentLineDiv.querySelector('.cursor');
+            if (cursor) cursor.remove();
+            
+            // Remove id from old currentLine
+            const oldCurrentLine = document.getElementById('currentLine');
+            if (oldCurrentLine) oldCurrentLine.removeAttribute('id');
+            
+            // Simulate cd command
+            const cdLine = document.createElement('div');
+            cdLine.className = 'terminal-line';
+            cdLine.innerHTML = `${getPrompt()} <span class="ps-output">cd C:\\Users\\ranso\\gtd</span>`;
+            terminal.appendChild(cdLine);
+            
+            await sleep(300);
+            
+            // Show empty prompt after cd
+            const afterCdLine = document.createElement('div');
+            afterCdLine.className = 'terminal-line';
+            afterCdLine.innerHTML = getPrompt();
+            terminal.appendChild(afterCdLine);
+            
+            await sleep(300);
+            
+            // Simulate file creation command
+            const createLine = document.createElement('div');
+            createLine.className = 'terminal-line';
+            createLine.innerHTML = `${getPrompt()} <span class="ps-output">New-Item -ItemType File -Name "${escapeHtml(selectedFileName)}"</span>`;
+            terminal.appendChild(createLine);
+            
+            await sleep(300);
+            
+            // Create new current line with cursor for typing code
+            const newCurrentLine = document.createElement('div');
+            newCurrentLine.className = 'terminal-line';
+            newCurrentLine.innerHTML = `${getPrompt()} <span class="ps-output" id="currentLine"></span><span class="cursor"></span>`;
+            terminal.appendChild(newCurrentLine);
+            
+            // Auto-scroll
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Sleep helper
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Handle key press
+        function handleKeyPress(event) {
+            // Ignore keys during command simulation
+            if (isSimulatingCommands) {
+                event.preventDefault();
+                return;
+            }
+            
+            // Handle Alt key toggle for free coding mode
+            if (event.key === 'Alt') {
+                event.preventDefault();
+                toggleFreeCodingMode();
+                return;
+            }
+
+            // Handle Backspace - delete last character
+            if (event.key === 'Backspace') {
+                event.preventDefault();
+                deleteLastCharacter();
+                return;
+            }
+
+            // Prevent default behavior for most keys
+            if (!event.ctrlKey && !event.metaKey && event.key !== 'F5') {
+                event.preventDefault();
+            }
+
+            // Ignore modifier keys alone
+            if (['Shift', 'Control', 'Meta', 'CapsLock'].includes(event.key)) {
+                return;
+            }
+
+            // Free coding mode - type whatever you want
+            if (freeCodingMode) {
+                handleFreeCoding(event);
+                return;
+            }
+
+            // Check if file is selected
+            if (selectedFile === null) {
+                addTerminalLine('Error: No file selected. Please select a file from the sidebar first.');
+                return;
+            }
+
+            // Check if we've reached the end of the file
+            if (currentPosition >= currentContent.length) {
+                addTerminalLine('');
+                addTerminalLine('End of file reached. Select another file or save your work.');
+                return;
+            }
+
+            // Get next character from the selected file
+            const nextChar = currentContent[currentPosition];
+            currentPosition++;
+
+            // Add character to terminal content
+            terminalContent += nextChar;
+            
+            // Update current line display
+            const currentLineElement = document.getElementById('currentLine');
+            currentLineElement.textContent = terminalContent;
+
+            // Update character count
+            document.getElementById('charCount').textContent = currentPosition;
+
+            // Auto-scroll to bottom
+            const terminal = document.getElementById('terminal');
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Delete last character
+        function deleteLastCharacter() {
+            if (terminalContent.length === 0) {
+                return; // Nothing to delete
+            }
+
+            // Remove last character
+            terminalContent = terminalContent.slice(0, -1);
+            
+            // Adjust position if not in free coding mode
+            if (!freeCodingMode && currentPosition > 0) {
+                currentPosition--;
+            }
+
+            // Update display
+            const currentLineElement = document.getElementById('currentLine');
+            currentLineElement.textContent = terminalContent;
+            
+            // Update character count
+            document.getElementById('charCount').textContent = currentPosition;
+        }
+
+        // Toggle free coding mode
+        function toggleFreeCodingMode() {
+            freeCodingMode = !freeCodingMode;
+            
+            if (freeCodingMode) {
+                // Entering free coding mode - just track the starting position
+                freeCodingStartPosition = currentPosition;
+            } else {
+                // Exiting free coding mode - auto-correct to match file
+                if (selectedFile !== null) {
+                    // Ensure position doesn't exceed file content length
+                    const targetPosition = Math.min(currentPosition, currentContent.length);
+                    
+                    // Sync back to the correct file content at the position we're at
+                    terminalContent = currentContent.slice(0, targetPosition);
+                    currentPosition = targetPosition;
+                    
+                    // Update display
+                    const currentLineElement = document.getElementById('currentLine');
+                    currentLineElement.textContent = terminalContent;
+                    
+                    // Update character count
+                    document.getElementById('charCount').textContent = currentPosition;
+                }
+            }
+            
+            // Update status bar indicator
+            updateModeIndicator();
+        }
+
+        // Handle free coding input
+        function handleFreeCoding(event) {
+            // Get the actual character typed
+            const char = event.key;
+            
+            // Only add printable characters
+            if (char.length === 1) {
+                terminalContent += char;
+                currentPosition++;
+            } else if (char === 'Enter') {
+                terminalContent += '\n';
+                currentPosition++;
+            } else if (char === 'Tab') {
+                terminalContent += '\t';
+                currentPosition++;
+            }
+            
+            // Update display
+            const currentLineElement = document.getElementById('currentLine');
+            currentLineElement.textContent = terminalContent;
+            
+            // Update character count
+            document.getElementById('charCount').textContent = currentPosition;
+            
+            // Auto-scroll to bottom
+            const terminal = document.getElementById('terminal');
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Update mode indicator in UI
+        function updateModeIndicator() {
+            const modeIndicator = document.getElementById('modeIndicator');
+            if (modeIndicator) {
+                modeIndicator.textContent = freeCodingMode ? 'FREE CODING MODE' : 'Ready';
+                modeIndicator.style.color = freeCodingMode ? '#f1d56f' : '#fff';
+                modeIndicator.style.fontWeight = freeCodingMode ? 'bold' : 'normal';
+            }
+        }
+
+        // Add a new line to terminal
+        function addTerminalLine(text) {
+            const terminal = document.getElementById('terminal');
+            const currentLineDiv = terminal.querySelector('.terminal-line:last-child');
+            
+            // Remove cursor from current line
+            const cursor = currentLineDiv.querySelector('.cursor');
+            if (cursor) cursor.remove();
+
+            // Remove id from old currentLine to prevent duplicates
+            const oldCurrentLine = document.getElementById('currentLine');
+            if (oldCurrentLine) oldCurrentLine.removeAttribute('id');
+
+            // Create new line with escaped text
+            const newLine = document.createElement('div');
+            newLine.className = 'terminal-line';
+            const safeText = escapeHtml(text);
+            newLine.innerHTML = `${getPrompt()} <span class="ps-output">${safeText}</span>`;
+            
+            // Create new current line with cursor
+            const newCurrentLine = document.createElement('div');
+            newCurrentLine.className = 'terminal-line';
+            newCurrentLine.innerHTML = `${getPrompt()} <span class="ps-output" id="currentLine"></span><span class="cursor"></span>`;
+            
+            terminal.appendChild(newLine);
+            terminal.appendChild(newCurrentLine);
+
+            // Auto-scroll
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Clear terminal
+        function clearTerminal() {
+            terminalContent = '';
+            freeCodingMode = false;
+            freeCodingStartPosition = 0;
+            selectedFileName = '';
+            const terminal = document.getElementById('terminal');
+            terminal.innerHTML = `
+                <div class="terminal-line">
+                    ${getPrompt()} <span class="ps-output">Terminal cleared.</span>
+                </div>
+                <div class="terminal-line">
+                    ${getPrompt()} <span class="ps-output" id="currentLine"></span><span class="cursor"></span>
+                </div>
+            `;
+            updateModeIndicator();
+            document.getElementById('terminal').focus();
+        }
+
+        // Show save dialog
+        function showSaveDialog() {
+            if (!terminalContent || terminalContent.trim() === '') {
+                addTerminalLine('Error: No content to save. Type some code first.');
+                return;
+            }
+
+            const modal = document.getElementById('saveModal');
+            const input = document.getElementById('saveFileName');
+            
+            // Suggest filename based on selected file
+            if (selectedFile !== null) {
+                const originalName = uploadedFiles[selectedFile].name;
+                const nameParts = originalName.split('.');
+                const extension = nameParts.pop();
+                const baseName = nameParts.join('.');
+                input.value = `${baseName}_edited.${extension}`;
+            } else {
+                input.value = 'mycode.txt';
+            }
+
+            modal.classList.add('active');
+            input.focus();
+            input.select();
+        }
+
+        // Close save dialog
+        function closeSaveDialog() {
+            const modal = document.getElementById('saveModal');
+            modal.classList.remove('active');
+            document.getElementById('terminal').focus();
+        }
+
+        // Save file
+        function saveFile() {
+            const filename = document.getElementById('saveFileName').value.trim();
+            
+            if (!filename) {
+                alert('Please enter a filename');
+                return;
+            }
+
+            // Create blob and download
+            const blob = new Blob([terminalContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // Close modal and show success message
+            closeSaveDialog();
+            addTerminalLine(`File saved as: ${filename}`);
+        }
+
+        // Click anywhere in terminal to focus it
+        document.getElementById('terminal').addEventListener('click', function() {
+            this.focus();
+        });
+    </script>
+</body>
+</html>
