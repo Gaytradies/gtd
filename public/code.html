@@ -368,7 +368,7 @@
                     <span>Characters: <span id="charCount">0</span> / <span id="totalChars">0</span></span>
                 </div>
                 <div class="status-item">
-                    <span>Ready</span>
+                    <span id="modeIndicator">Ready</span>
                 </div>
             </div>
         </div>
@@ -612,8 +612,8 @@
             } else {
                 // Exiting free coding mode - auto-correct to match file
                 if (selectedFile !== null) {
-                    // Determine how many characters should actually be there
-                    const targetPosition = freeCodingStartPosition + (currentPosition - freeCodingStartPosition);
+                    // Ensure position doesn't exceed file content length
+                    const targetPosition = Math.min(currentPosition, currentContent.length);
                     
                     // Sync back to the correct file content at the position we're at
                     terminalContent = currentContent.slice(0, targetPosition);
@@ -669,11 +669,11 @@
 
         // Update mode indicator in UI
         function updateModeIndicator() {
-            const statusReady = document.querySelector('.status-bar .status-item:last-child span');
-            if (statusReady) {
-                statusReady.textContent = freeCodingMode ? 'FREE CODING MODE' : 'Ready';
-                statusReady.style.color = freeCodingMode ? '#f1d56f' : '#fff';
-                statusReady.style.fontWeight = freeCodingMode ? 'bold' : 'normal';
+            const modeIndicator = document.getElementById('modeIndicator');
+            if (modeIndicator) {
+                modeIndicator.textContent = freeCodingMode ? 'FREE CODING MODE' : 'Ready';
+                modeIndicator.style.color = freeCodingMode ? '#f1d56f' : '#fff';
+                modeIndicator.style.fontWeight = freeCodingMode ? 'bold' : 'normal';
             }
         }
 
